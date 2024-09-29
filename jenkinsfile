@@ -71,7 +71,7 @@ pipeline {
             steps {
                 // Run the Ansible playbook using the updated inventory
                 sh """
-                ansible-playbook play-playbook.yml -i inventory.txt --private-key ansible-ec2-key.pem --ssh-extra-args '-o StrictHostKeyChecking=no'
+                ansible-playbook play-book.yml -i inventory.txt --private-key ansible-ec2-key.pem --ssh-extra-args '-o StrictHostKeyChecking=no'
                 """
             }
         }

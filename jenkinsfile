@@ -66,6 +66,12 @@ pipeline {
                 }
             }
         }
+        stage('Setup') {
+            steps {
+                // Ensure the private key has the correct permissions
+                sh 'chmod 400 ansible-ec2-key.pem'
+            }
+        }
 
         stage('Run Ansible Playbook') {
             steps {

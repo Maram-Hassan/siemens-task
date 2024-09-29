@@ -1,0 +1,61 @@
+// pipeline {
+//     agent any // Runs on any available agent
+
+//     stages {
+//         stage('Checkout') {
+//             steps {
+//                 // Checkout your repository
+//                 git branch: 'main', url: 'https://github.com/Maram-Hassan/siemens-task.git'
+//             }
+//         }
+
+//         stage('Install Terraform') {
+//             steps {
+//                 // If terraform is not installed on the agent, install it (assuming it's a Linux agent)
+//                 sh '''
+//                 if ! [ -x "$(command -v terraform)" ]; then
+//                   wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+//                   unzip terraform_1.5.0_linux_amd64.zip
+//                   sudo mv terraform /usr/local/bin/
+//                 fi
+//                 '''
+//             }
+//         }
+
+//         stage('Terraform Init') {
+//             steps {
+//                 // Use AWS credentials
+//                 withAWS(credentials: 'aws-credentials') {
+//                     // Run terraform init to initialize the directory
+//                     sh 'terraform init'
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Plan') {
+//             steps {
+//                 // Use AWS credentials
+//                 withAWS(credentials: 'aws-credentials') {
+//                     // Run terraform plan to see the changes
+//                     sh 'terraform plan'
+//                 }
+//             }
+//         }
+//         stage('Terraform Apply') {
+//             steps {
+//                 // Use AWS credentials
+//                 withAWS(credentials: 'aws-credentials') {
+//                 // Run terraform apply to create resources
+//                     sh 'terraform apply -auto-approve'
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             // Clean up workspace after pipeline finishes
+//             cleanWs()
+//         }
+//     }
+// }

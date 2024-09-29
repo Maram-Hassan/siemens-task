@@ -56,7 +56,7 @@ pipeline {
             steps {
                 script {
                     // Capture the public IP of the EC2 instance
-                    def ip = sh(script: 'terraform output -raw instance_ip', returnStdout: true).trim()
+                    def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
                     
                     // Update the inventory file with the new IP
                     sh """

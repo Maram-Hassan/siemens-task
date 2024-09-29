@@ -1,8 +1,10 @@
 resource "aws_instance" "TerraformInstance" {
-  ami                         = "ami-0ebfd941bbafe70c6" # Ubuntu Server 20.04 LTS (Free Tier eligible in us-east-1)
-  instance_type               = "t2.medium"
+   ami                         = "ami-0ebfd941bbafe70c6" # Ubuntu Server 20.04 LTS (Free Tier eligible in us-east-1)
+  instance_type               = "t2.medium"   
   subnet_id                   = aws_subnet.terraform-subnet.id
   associate_public_ip_address = true
+   key_name                    = "ansible-ec2-key" # Add this line
+
   # Attach the security group
   vpc_security_group_ids = [aws_security_group.allow_http_ssh.id]
 
@@ -47,7 +49,7 @@ resource "aws_security_group" "allow_http_ssh" {
   vpc_id      = aws_vpc.terraform-vpc.id # Associate with the correct VPC
 
   # Ingress rules (incoming traffic)
-
+  
   # Allow HTTP traffic
   ingress {
     description = "Allow HTTP (IPv4)"
@@ -83,3 +85,7 @@ resource "aws_security_group" "allow_http_ssh" {
     Name = "allow_http_ssh"
   }
 }
+
+
+
+

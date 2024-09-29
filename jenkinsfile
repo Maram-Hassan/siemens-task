@@ -11,7 +11,7 @@ pipeline {
 
         stage('Install Terraform') {
             steps {
-                // If terraform is not installed on the agent, install it
+                // Install Terraform if not already installed
                 sh '''
                 if ! [ -x "$(command -v terraform)" ]; then
                   wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
@@ -24,9 +24,8 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                // Use AWS credentials
+                // Use AWS credentials for Terraform
                 withAWS(credentials: 'aws-credentials') {
-                    // Run terraform init to initialize the directory
                     sh 'terraform init'
                 }
             }
@@ -34,51 +33,48 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                // Use AWS credentials
+                // Use AWS credentials to run Terraform plan
                 withAWS(credentials: 'aws-credentials') {
-                    // Run terraform plan to see the changes
                     sh 'terraform plan'
                 }
             }
         }
-        
+
         stage('Terraform Apply') {
             steps {
-                // Use AWS credentials
+                // Use AWS credentials to run Terraform apply
                 withAWS(credentials: 'aws-credentials') {
-                    // Run terraform apply to create resources
                     sh 'terraform apply -auto-approve'
                 }
             }
         }
-        
+
         stage('Get EC2 Public IP') {
             steps {
                 script {
-                    // Capture the public IP of the EC2 instance
+                    // Capture the public IP of the EC2 instance from Terraform output
                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
-                    
-                    // Update the inventory file with the new IP
+
+                    // Update the inventory file with the new EC2 IP for Ansible, no need for a key file reference
                     sh """
                     echo "[nexus_server]" > inventory.txt
-                    echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=ansible-ec2-key.pem" >> inventory.txt
+                    echo "$ip ansible_user=ubuntu" >> inventory.txt
                     """
                 }
             }
         }
-        stage('Setup') {
-            steps {
-                // Ensure the private key has the correct permissions
-                sh 'chmod 400 ansible-ec2-key.pem'
-            }
-        }
 
-        stage('Run Ansible Playbook') {
+        stage('Install Nexus') {
             steps {
-                // Run the Ansible playbook using the updated inventory
-                sh """
-                ansible-playbook play-book.yml -i inventory.txt --private-key ansible-ec2-key.pem --ssh-extra-args '-o StrictHostKeyChecking=no'
-                """
+                // Use the SSH key from Jenkins credentials to run the Ansible playbook
+                withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+                    sh '''
+                    chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
+
+                    # Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
+                    ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
+                    '''
+                }
             }
         }
     }
@@ -90,5 +86,3 @@ pipeline {
         }
     }
 }
-
-                  

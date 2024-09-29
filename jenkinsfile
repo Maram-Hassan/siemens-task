@@ -49,35 +49,34 @@ pipeline {
             }
         }
 
-        stage('Get EC2 Public IP') {
+        stage('Get EC2 Public IP and Update Inventory') {
             steps {
                 script {
                     // Capture the public IP of the EC2 instance from Terraform output
                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
 
-                    // Use a placeholder for the private key and add it in the next step
-                    sh """
-                    echo "[nexus_server]" > inventory.txt
-                    echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}" >> inventory.txt
-                    """
+                    // Use the SSH private key from Jenkins credentials
+                    withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+                        // Update the inventory file with the new EC2 IP and the SSH key path
+                        sh """
+                        echo "[nexus_server]" > inventory.txt
+                        echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}" >> inventory.txt
+                        """
+                    }
                 }
             }
         }
 
         stage('Install Nexus') {
             steps {
-                // Use the SSH key from Jenkins credentials to run the Ansible playbook
+                // Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh '''
                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
-                    
-                    # Update the inventory file with the actual SSH key path
-                    sed -i "s|/tmp/ssh_key|${SSH_KEY}|g" inventory.txt
-                    
-                    # Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
+
+                    # Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
                     ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
-                    
                 }
             }
         }

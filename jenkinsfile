@@ -55,10 +55,10 @@ pipeline {
                     // Capture the public IP of the EC2 instance from Terraform output
                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
 
-                    // Update the inventory file with the new EC2 IP for Ansible, no need for a key file reference
+                    // Use a placeholder for the private key and add it in the next step
                     sh """
                     echo "[nexus_server]" > inventory.txt
-                    echo "$ip ansible_user=ubuntu" >> inventory.txt
+                    echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}" >> inventory.txt
                     """
                 }
             }
@@ -70,10 +70,14 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh '''
                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
-
+                    
+                    # Update the inventory file with the actual SSH key path
+                    sed -i "s|/tmp/ssh_key|${SSH_KEY}|g" inventory.txt
+                    
                     # Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
                     ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
+                    
                 }
             }
         }

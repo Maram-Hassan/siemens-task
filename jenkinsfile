@@ -71,7 +71,7 @@ pipeline {
             steps {
                 script {
                     echo "Waiting for 1 minute before proceeding..."
-                    sleep time: 5, unit: 'SECONDS'
+                    sleep time: 120, unit: 'SECONDS'
                     echo "Proceeding to run Ansible playbook..."
                 }
             }

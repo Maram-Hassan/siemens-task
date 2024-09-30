@@ -70,31 +70,59 @@ pipeline {
         }
 
         stage('Install Nexus with Ansible') {
-            
+             steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Clone React Library Repository') {
-           
+            steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Install React Library Dependencies') {
-          
+           steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Build React Library') {
-            
+            steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Create React Library Package') {
-           
+           steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Setup NPM Authentication') {
-            
+            steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
 
         stage('Publish React Library Package') {
-            
+            steps {
+                script {
+                    echo "Waiting for 2 minutes before proceeding..."
+                }
+            }
         }
     }
 

@@ -70,41 +70,31 @@ pipeline {
         }
 
         stage('Install Nexus with Ansible') {
-            steps {
-              
-            }
+            
         }
 
         stage('Clone React Library Repository') {
-            steps {
-            }
+           
         }
 
         stage('Install React Library Dependencies') {
-            steps {
-            }
+          
         }
 
         stage('Build React Library') {
-            steps {
-            }
+            
         }
 
         stage('Create React Library Package') {
-            steps {
-            }
+           
         }
 
         stage('Setup NPM Authentication') {
-            steps {
-               
-            }
+            
         }
 
         stage('Publish React Library Package') {
-            steps {
-                
-            }
+            
         }
     }
 

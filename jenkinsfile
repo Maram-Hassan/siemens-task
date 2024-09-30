@@ -1,12 +1,10 @@
 pipeline {
     agent any
     
-
     stages {
         // Stage to checkout the Terraform repository
         stage('Checkout Terraform Repository') {
             steps {
-                // Checkout your repository for Terraform
                 git branch: 'main', url: 'https://github.com/Maram-Hassan/siemens-task.git'
             }
         }
@@ -14,7 +12,6 @@ pipeline {
         // Stage to install Terraform
         stage('Install Terraform') {
             steps {
-                // Install Terraform if not already installed
                 sh '''
                 if ! [ -x "$(command -v terraform)" ]; then
                   wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
@@ -56,12 +53,9 @@ pipeline {
         stage('Get EC2 Public IP and Update Inventory') {
             steps {
                 script {
-                    // Capture the public IP of the EC2 instance from Terraform output
                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
-
-                    // Use the SSH private key from Jenkins credentials
+                    
                     withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
-                        // Update the inventory file with the new EC2 IP and the SSH key path
                         sh """
                         echo "[nexus_server]" > inventory.txt
                         echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY} ansible_ssh_extra_args='-o ConnectTimeout=60'" >> inventory.txt
@@ -71,13 +65,12 @@ pipeline {
             }
         }
 
-        // Stage to wait before running the Ansible playbook
+        // Stage to delay for EC2 instance readiness
         stage('Delay Before Ansible Playbook') {
             steps {
                 script {
-                    echo "Waiting for 1 minute before proceeding..."
+                    echo "Waiting for EC2 instance to be ready..."
                     sleep time: 60, unit: 'SECONDS'
-                    echo "Proceeding to run Ansible playbook..."
                 }
             }
         }
@@ -87,10 +80,8 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh '''
-                    chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
-
-                    // Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
-                    ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY --user $SSH_USER --ssh-extra-args "-o StrictHostKeyChecking=no"
+                    chmod 600 $SSH_KEY  # Ensure correct permissions for the SSH key
+                    ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
                 }
             }
@@ -127,17 +118,25 @@ pipeline {
         // Stage to set up authentication for npm
         stage('Setup npm Authentication') {
             steps {
-                withCredentials([file(credentialsId: 'mynpm-cred', variable: 'NPM_TOKEN')]) {
-                    sh 'npm config set //localhost:8081/repository/npm-private/:_authToken=${NPM_TOKEN}'
+                script {
+                    def nexusIp = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
+                    
+                    withCredentials([file(credentialsId: 'mynpm-cred', variable: 'NPM_TOKEN')]) {
+                        sh "npm config set //${nexusIp}:8081/repository/npm-private/:_authToken=${NPM_TOKEN}"
+                    }
                 }
             }
         }
 
         // Stage to publish the React library to Nexus
-        stage('Publish React Library') {
+        stage('Publish React Library to Nexus') {
             steps {
-                withCredentials([file(credentialsId: 'mynpm-cred', variable: 'my-npmrc')]) {
-                    sh 'npm publish --userconfig $my-npmrc --loglevel verbose --registry=http://localhost:8081/repository/npm-private/'
+                script {
+                    def nexusIp = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
+                    
+                    withCredentials([file(credentialsId: 'mynpm-cred', variable: 'my-npmrc')]) {
+                        sh "npm publish --userconfig ${my-npmrc} --loglevel verbose --registry=http://${nexusIp}:8081/repository/npm-private/"
+                    }
                 }
             }
         }
@@ -145,7 +144,6 @@ pipeline {
 
     post {
         always {
-            // Clean up workspace after pipeline finishes
             cleanWs()
         }
     }

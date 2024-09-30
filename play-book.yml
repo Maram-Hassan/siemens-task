@@ -1,17 +1,19 @@
+- ---
 - hosts: nexus_server
   become: yes
   tasks:
 
     - name: Update the system package index
-      apt: 
-        update_cache: yes
-      when: ansible_os_family == 'Debian'
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_os_family == 'RedHat'
 
     - name: Install Java (OpenJDK 11)
-      apt: 
-        name: openjdk-11-jdk
+      yum:
+        name: java-11-openjdk
         state: present
-      when: ansible_os_family == 'Debian'
+      when: ansible_os_family == 'RedHat'
         
     - name: Download Nexus
       get_url:
@@ -85,10 +87,12 @@
         name: nexus
         state: restarted
 
-    - name: Ensure Nexus port (8081) is open
-      ufw:
-        rule: allow
-        port: '8081'
-        proto: tcp
+    - name: Ensure Nexus port (8081) is open in firewalld
+      firewalld:
+        service: nexus
+        port: 8081/tcp
+        permanent: yes
         state: enabled
-      when: ansible_os_family == 'Debian'
+        immediate: yes
+        zone: public
+      when: ansible_os_family == 'RedHat'

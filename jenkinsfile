@@ -120,9 +120,9 @@ pipeline {
                 // Install Terraform if not already installed
                 sh '''
                 if ! [ -x "$(command -v terraform)" ]; then
-                  wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
-                  unzip terraform_1.5.0_linux_amd64.zip
-                  sudo mv terraform /usr/local/bin/
+                    wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+                    unzip terraform_1.5.0_linux_amd64.zip
+                    sudo mv terraform /usr/local/bin/
                 fi
                 '''
             }
@@ -162,14 +162,14 @@ pipeline {
                     // Capture the public IP of the EC2 instance from Terraform output
                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
 
-                    // Use the SSH private key from Jenkins credentials
-                    withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
-                        // Update the inventory file with the new EC2 IP and the SSH key path
-                        sh """
-                        echo "[nexus_server]" > inventory.txt
-                        echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY} ansible_ssh_extra_args='-o ConnectTimeout=60'" >> inventory.txt
-                        """
-                    }
+                    // Prepare inventory content
+                    def inventoryContent = """
+[nexus_server]
+$ip ansible_user=ubuntu ansible_ssh_private_key_file=${env.SSH_KEY} ansible_ssh_extra_args='-o ConnectTimeout=60'
+"""
+
+                    // Use the writeFile function to create/update the inventory file
+                    writeFile file: 'inventory.txt', text: inventoryContent
                 }
             }
         }
@@ -192,8 +192,8 @@ pipeline {
                     sh '''
                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
 
-                    // Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
-                    ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY 
+                    # Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
+                    ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
                 }
             }
@@ -240,7 +240,7 @@ pipeline {
         stage('Publish React Library') {
             steps {
                 withCredentials([file(credentialsId: 'mynpm-cred', variable: 'my-npmrc')]) {
-                    sh 'npm publish --userconfig $my-npmrc --loglevel verbose --registry=http://localhost:8081/repository/npm-private/'
+                    sh 'npm publish --userconfig ${my-npmrc} --loglevel verbose --registry=http://localhost:8081/repository/npm-private/'
                 }
             }
         }

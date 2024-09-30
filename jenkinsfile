@@ -1,14 +1,120 @@
+// pipeline {
+//     agent any
+
+//     stages {
+//         stage('Checkout Terraform Repository') {
+//             steps {
+//                 // Checkout your repository
+//                 git branch: 'main', url: 'https://github.com/Maram-Hassan/siemens-task.git'
+//             }
+//         }
+
+//         stage('Install Terraform') {
+//             steps {
+//                 // Install Terraform if not already installed
+//                 sh '''
+//                 if ! [ -x "$(command -v terraform)" ]; then
+//                   wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+//                   unzip terraform_1.5.0_linux_amd64.zip
+//                   sudo mv terraform /usr/local/bin/
+//                 fi
+//                 '''
+//             }
+//         }
+
+//         stage('Terraform Init') {
+//             steps {
+//                 // Use AWS credentials for Terraform
+//                 withAWS(credentials: 'aws-credentials') {
+//                     sh 'terraform init'
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Plan') {
+//             steps {
+//                 // Use AWS credentials to run Terraform plan
+//                 withAWS(credentials: 'aws-credentials') {
+//                     sh 'terraform plan'
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Apply') {
+//             steps {
+//                 // Use AWS credentials to run Terraform apply
+//                 withAWS(credentials: 'aws-credentials') {
+//                     sh 'terraform apply -auto-approve'
+//                 }
+//             }
+//         }
+
+//         stage('Get EC2 Public IP and Update Inventory') {
+//             steps {
+//                 script {
+//                     // Capture the public IP of the EC2 instance from Terraform output
+//                     def ip = sh(script: 'terraform output -raw instance_public_ip', returnStdout: true).trim()
+
+//                     // Use the SSH private key from Jenkins credentials
+//                     withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+//                         // Update the inventory file with the new EC2 IP and the SSH key path
+//                         sh """
+//                         echo "[nexus_server]" > inventory.txt
+//                         echo "$ip ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY} ansible_ssh_extra_args='-o ConnectTimeout=60'" >> inventory.txt
+//                         """
+//                     }
+//                 }
+//             }
+
+//         }
+//         stage('Delay Before Ansible Playbook') {
+//             steps {
+//                 script {
+//                     echo "Waiting for 1 minute before proceeding..."
+//                     sleep time: 60, unit: 'SECONDS'
+//                     echo "Proceeding to run Ansible playbook..."
+//                 }
+//             }
+//         }
+        
+
+//         stage('Install Nexus') {
+//             steps {
+//                 // Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
+//                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+//                     sh '''
+//                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
+
+//                     # Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
+//                     ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
+//                     '''
+//                 }
+//             }
+//         }
+
+        
+//     }
+
+//     post {
+//         always {
+//             // Clean up workspace after pipeline finishes
+//             cleanWs()
+//         }
+//     }
+// }
 pipeline {
     agent any
 
     stages {
+        // Stage to checkout the Terraform repository
         stage('Checkout Terraform Repository') {
             steps {
-                // Checkout your repository
+                // Checkout your repository for Terraform
                 git branch: 'main', url: 'https://github.com/Maram-Hassan/siemens-task.git'
             }
         }
 
+        // Stage to install Terraform
         stage('Install Terraform') {
             steps {
                 // Install Terraform if not already installed
@@ -22,33 +128,34 @@ pipeline {
             }
         }
 
+        // Stage to initialize Terraform
         stage('Terraform Init') {
             steps {
-                // Use AWS credentials for Terraform
                 withAWS(credentials: 'aws-credentials') {
                     sh 'terraform init'
                 }
             }
         }
 
+        // Stage to plan the Terraform configuration
         stage('Terraform Plan') {
             steps {
-                // Use AWS credentials to run Terraform plan
                 withAWS(credentials: 'aws-credentials') {
                     sh 'terraform plan'
                 }
             }
         }
 
+        // Stage to apply the Terraform configuration
         stage('Terraform Apply') {
             steps {
-                // Use AWS credentials to run Terraform apply
                 withAWS(credentials: 'aws-credentials') {
                     sh 'terraform apply -auto-approve'
                 }
             }
         }
 
+        // Stage to get EC2 public IP and update inventory for Ansible
         stage('Get EC2 Public IP and Update Inventory') {
             steps {
                 script {
@@ -65,34 +172,78 @@ pipeline {
                     }
                 }
             }
-
         }
+
+        // Stage to wait before running the Ansible playbook
         stage('Delay Before Ansible Playbook') {
             steps {
                 script {
                     echo "Waiting for 1 minute before proceeding..."
-                    sleep time: 120, unit: 'SECONDS'
+                    sleep time: 60, unit: 'SECONDS'
                     echo "Proceeding to run Ansible playbook..."
                 }
             }
         }
-        
 
+        // Stage to install Nexus using Ansible
         stage('Install Nexus') {
             steps {
-                // Run the Ansible playbook using the inventory file and SSH credentials from Jenkins
                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh '''
                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
 
-                    # Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
-                    ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
+                    // Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
+                    ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY --user $SSH_USER --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
                 }
             }
         }
 
-        
+        // Stage to clone the React library repository
+        stage('Clone React Library Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Maram-Hassan/react-library.git'
+            }
+        }
+
+        // Stage to install dependencies for the React library
+        stage('Install React Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        // Stage to build the React library
+        stage('Build React Library') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        // Stage to create the package for the React library
+        stage('Create React Package') {
+            steps {
+                sh 'npm pack'
+            }
+        }
+
+        // Stage to set up authentication for npm
+        stage('Setup npm Authentication') {
+            steps {
+                withCredentials([file(credentialsId: 'mynpm-cred', variable: 'NPM_TOKEN')]) {
+                    sh 'npm config set //localhost:8081/repository/npm-private/:_authToken=${NPM_TOKEN}'
+                }
+            }
+        }
+
+        // Stage to publish the React library to Nexus
+        stage('Publish React Library') {
+            steps {
+                withCredentials([file(credentialsId: 'mynpm-cred', variable: 'my-npmrc')]) {
+                    sh 'npm publish --userconfig $my-npmrc --loglevel verbose --registry=http://localhost:8081/repository/npm-private/'
+                }
+            }
+        }
     }
 
     post {

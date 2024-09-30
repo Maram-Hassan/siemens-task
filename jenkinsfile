@@ -75,12 +75,13 @@ pipeline {
             }
         }
 
+
         // Stage to install Nexus using Ansible
         stage('Install Nexus') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'b7728db5-7ee2-4294-afe8-fcaa0aaf4a2c', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                     sh '''
-                    chmod 600 $SSH_KEY  # Ensure correct permissions for the SSH key
+                    chmod 640 $SSH_KEY  # Ensure correct permissions for the SSH key
                     ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
                 }

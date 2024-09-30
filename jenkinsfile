@@ -75,11 +75,13 @@ pipeline {
                     chmod 600 ${SSH_KEY}  # Fix permissions for SSH key
 
                     # Run the Ansible playbook using the inventory file and the SSH key from Jenkins credentials
-                    ansible-playbook play-book.yml -i inventory.txt --private-key ${SSH_KEY} --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
+                    ansible-playbook play-book.yml -i inventory.txt --private-key $SSH_KEY --user ${SSH_USER} --ssh-extra-args "-o StrictHostKeyChecking=no"
                     '''
                 }
             }
         }
+
+        
     }
 
     post {

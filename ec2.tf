@@ -1,5 +1,5 @@
 resource "aws_instance" "TerraformInstance" {
-   ami                         = "ami-0ebfd941bbafe70c6" # Ubuntu Server 20.04 LTS (Free Tier eligible in us-east-1)
+   ami                         = "ami-0e86e20dae9224db8" # Ubuntu Server 20.04 LTS (Free Tier eligible in us-east-1)
   instance_type               = "t2.medium"   
   subnet_id                   = aws_subnet.terraform-subnet.id
   associate_public_ip_address = true
